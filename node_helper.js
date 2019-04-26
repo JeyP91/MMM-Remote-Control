@@ -598,14 +598,14 @@ module.exports = NodeHelper.create(Object.assign({
             let status = "unknown";
             let monitorOnCommand = (this.initialized && "monitorOnCommand" in this.thisConfig.customCommand) ?
                 this.thisConfig.customCommand.monitorOnCommand :
-                "tvservice --preferred && sudo chvt 6 && sudo chvt 7";
+                "echo 1 > /sys/class/amhdmitx/amhdmitx0/phy";
             let monitorOffCommand = (this.initialized && "monitorOffCommand" in this.thisConfig.customCommand) ?
                 this.thisConfig.customCommand.monitorOffCommand :
-                "tvservice -o";
+                "echo 0 > /sys/class/amhdmitx/amhdmitx0/phy";
             let monitorStatusCommand = (this.initialized && "monitorStatusCommand" in this.thisConfig.customCommand) ?
                 this.thisConfig.customCommand.monitorStatusCommand :
-                "tvservice --status";
-            if (["MONITORTOGGLE", "MONITORSTATUS", "MONITORON"].indexOf(action) !== -1) {
+                "cat /sys/class/amhdmitx/amhdmitx0/phy";
+            if (["MONITORTOGGLE", "MONITORSTATUS"].indexOf(action) !== -1) {
                 screenStatus = exec(monitorStatusCommand, opts, (error, stdout, stderr) => {
                     if (stdout.indexOf("TV is off") !== -1 || stdout.indexOf("false") !== -1) {
                         // Screen is OFF, turn it ON
@@ -629,6 +629,14 @@ module.exports = NodeHelper.create(Object.assign({
                     return;
                 });
             }
+            if (action === "MONITORON") {
+                exec(monitorOnCommand, (error, stdout, stderr) => {
+                    this.checkForExecError(error, stdout, stderr, res, { monitor: "off" });
+                });
+                this.sendSocketNotification("USER_PRESENCE", false);
+                return;
+            }
+
             if (action === "MONITOROFF") {
                 exec(monitorOffCommand, (error, stdout, stderr) => {
                     this.checkForExecError(error, stdout, stderr, res, { monitor: "off" });
